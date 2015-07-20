@@ -16,15 +16,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
-    <None Include="res\mipl.rc2">
+    <None Include="res\MIPL.rc2">
       <Filter>리소스 파일</Filter>
     </None>
-    <None Include="res\mipl.ico">
+    <None Include="res\MIPL.ico">
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="mipl.h">
+    <ClInclude Include="MIPL.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
@@ -44,7 +44,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mipl.cpp">
+    <ClCompile Include="MIPL.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
@@ -58,7 +58,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="mipl.rc">
+    <ResourceCompile Include="MIPL.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
   </ItemGroup>

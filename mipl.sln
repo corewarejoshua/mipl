@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mipl", "mipl.vcxproj", "{03A1CA65-E312-4E34-8C90-0101CBE8E828}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MIPL", "MIPL.vcxproj", "{F900EEAD-F280-4B71-8CA9-A41990C39C97}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,10 +9,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{03A1CA65-E312-4E34-8C90-0101CBE8E828}.Debug|Win32.ActiveCfg = Debug|Win32
-		{03A1CA65-E312-4E34-8C90-0101CBE8E828}.Debug|Win32.Build.0 = Debug|Win32
-		{03A1CA65-E312-4E34-8C90-0101CBE8E828}.Release|Win32.ActiveCfg = Release|Win32
-		{03A1CA65-E312-4E34-8C90-0101CBE8E828}.Release|Win32.Build.0 = Release|Win32
+		{F900EEAD-F280-4B71-8CA9-A41990C39C97}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F900EEAD-F280-4B71-8CA9-A41990C39C97}.Debug|Win32.Build.0 = Debug|Win32
+		{F900EEAD-F280-4B71-8CA9-A41990C39C97}.Release|Win32.ActiveCfg = Release|Win32
+		{F900EEAD-F280-4B71-8CA9-A41990C39C97}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

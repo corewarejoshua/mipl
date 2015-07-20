@@ -1,36 +1,47 @@
-
-// ChildView.h : CChildView 클래스의 인터페이스
-//
-
-
 #pragma once
-
-
-// CChildView 창
 
 class CChildView : public CWnd
 {
-// 생성입니다.
+// Construction
 public:
 	CChildView();
 
-// 특성입니다.
+// Attributes
+public:
+   BITMAPINFO *      bitmapInfo;
+   unsigned char *   dibData;
+   unsigned char *   srcData;
+   unsigned char *   dstData;
+
+   int               samplePerPixel;
+   int               imageWidth;
+   int               imageHeight;
+   int               imageStep;
+   
+   int               GetRealWidth(int width);
+   unsigned char     Clip(int value, int low, int high);
+
+// Operations
 public:
 
-// 작업입니다.
-public:
-
-// 재정의입니다.
+// Overrides
 	protected:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 
-// 구현입니다.
+// Implementation
 public:
 	virtual ~CChildView();
 
-	// 생성된 메시지 맵 함수
+	// Generated message map functions
 protected:
 	afx_msg void OnPaint();
 	DECLARE_MESSAGE_MAP()
+public:
+   afx_msg void OnFileOpen();
+   afx_msg void OnArithmeticAdd();
+   afx_msg void OnArithmeticSub();
+   afx_msg void OnArithmeticMultiply();
+   afx_msg void OnArithmeticDivide();
+   afx_msg void OnArithmeticNegative();
 };
 

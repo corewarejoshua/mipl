@@ -1,9 +1,9 @@
 
-// MainFrm.cpp : CMainFrame 클래스의 구현
+// MainFrm.cpp : implementation of the CMainFrame class
 //
 
 #include "stdafx.h"
-#include "mipl.h"
+#include "MIPL.h"
 
 #include "MainFrm.h"
 
@@ -22,17 +22,17 @@ END_MESSAGE_MAP()
 
 static UINT indicators[] =
 {
-	ID_SEPARATOR,           // 상태 줄 표시기
+	ID_SEPARATOR,           // status line indicator
 	ID_INDICATOR_CAPS,
 	ID_INDICATOR_NUM,
 	ID_INDICATOR_SCRL,
 };
 
-// CMainFrame 생성/소멸
+// CMainFrame construction/destruction
 
 CMainFrame::CMainFrame()
 {
-	// TODO: 여기에 멤버 초기화 코드를 추가합니다.
+	// TODO: add member initialization code here
 }
 
 CMainFrame::~CMainFrame()
@@ -44,17 +44,17 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
-	// 프레임의 클라이언트 영역을 차지하는 뷰를 만듭니다.
+	// create a view to occupy the client area of the frame
 	if (!m_wndView.Create(NULL, NULL, AFX_WS_DEFAULT_VIEW, CRect(0, 0, 0, 0), this, AFX_IDW_PANE_FIRST, NULL))
 	{
-		TRACE0("뷰 창을 만들지 못했습니다.\n");
+		TRACE0("Failed to create view window\n");
 		return -1;
 	}
 
 	if (!m_wndStatusBar.Create(this))
 	{
-		TRACE0("상태 표시줄을 만들지 못했습니다.\n");
-		return -1;      // 만들지 못했습니다.
+		TRACE0("Failed to create status bar\n");
+		return -1;      // fail to create
 	}
 	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators)/sizeof(UINT));
 
@@ -65,15 +65,15 @@ BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
 {
 	if( !CFrameWnd::PreCreateWindow(cs) )
 		return FALSE;
-	// TODO: CREATESTRUCT cs를 수정하여 여기에서
-	//  Window 클래스 또는 스타일을 수정합니다.
+	// TODO: Modify the Window class or styles here by modifying
+	//  the CREATESTRUCT cs
 
 	cs.dwExStyle &= ~WS_EX_CLIENTEDGE;
 	cs.lpszClass = AfxRegisterWndClass(0);
 	return TRUE;
 }
 
-// CMainFrame 진단
+// CMainFrame diagnostics
 
 #ifdef _DEBUG
 void CMainFrame::AssertValid() const
@@ -88,20 +88,20 @@ void CMainFrame::Dump(CDumpContext& dc) const
 #endif //_DEBUG
 
 
-// CMainFrame 메시지 처리기
+// CMainFrame message handlers
 
 void CMainFrame::OnSetFocus(CWnd* /*pOldWnd*/)
 {
-	// 뷰 창으로 포커스를 이동합니다.
+	// forward focus to the view window
 	m_wndView.SetFocus();
 }
 
 BOOL CMainFrame::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO* pHandlerInfo)
 {
-	// 뷰에서 첫째 크랙이 해당 명령에 나타나도록 합니다.
+	// let the view have first crack at the command
 	if (m_wndView.OnCmdMsg(nID, nCode, pExtra, pHandlerInfo))
 		return TRUE;
 
-	// 그렇지 않으면 기본 처리합니다.
+	// otherwise, do default handling
 	return CFrameWnd::OnCmdMsg(nID, nCode, pExtra, pHandlerInfo);
 }

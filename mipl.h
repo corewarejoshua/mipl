@@ -1,35 +1,35 @@
 
-// mipl.h : mipl 응용 프로그램에 대한 주 헤더 파일
+// MIPL.h : main header file for the MIPL application
 //
 #pragma once
 
 #ifndef __AFXWIN_H__
-	#error "PCH에 대해 이 파일을 포함하기 전에 'stdafx.h'를 포함합니다."
+	#error "include 'stdafx.h' before including this file for PCH"
 #endif
 
-#include "resource.h"       // 주 기호입니다.
+#include "resource.h"       // main symbols
 
 
-// CmiplApp:
-// 이 클래스의 구현에 대해서는 mipl.cpp을 참조하십시오.
+// CMIPLApp:
+// See MIPL.cpp for the implementation of this class
 //
 
-class CmiplApp : public CWinApp
+class CMIPLApp : public CWinApp
 {
 public:
-	CmiplApp();
+	CMIPLApp();
 
 
-// 재정의입니다.
+// Overrides
 public:
 	virtual BOOL InitInstance();
 	virtual int ExitInstance();
 
-// 구현입니다.
+// Implementation
 
 public:
 	afx_msg void OnAppAbout();
 	DECLARE_MESSAGE_MAP()
 };
 
-extern CmiplApp theApp;
+extern CMIPLApp theApp;
