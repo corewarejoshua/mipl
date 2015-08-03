@@ -28,6 +28,10 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
    ON_COMMAND(ID_ARITHMETIC_MULTIPLY,     OnArithmeticMultiply)
    ON_COMMAND(ID_ARITHMETIC_DIVIDE,       OnArithmeticDivide)
    ON_COMMAND(ID_ARITHMETIC_NEGATIVE,     OnArithmeticNegative)
+   ON_COMMAND(ID_GEOMETRIC_FLIPV,         OnGeometricFlipV)
+   ON_COMMAND(ID_GEOMETRIC_FLIPH,         OnGeometricFlipH)
+   ON_COMMAND(ID_GEOMETRIC_ROTATELEFT,    OnGeometricRotateLeft)
+   ON_COMMAND(ID_GEOMETRIC_ROTATERIGHT,   OnGeometricRotateRight)
 END_MESSAGE_MAP()
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs) 
@@ -51,8 +55,8 @@ void CChildView::OnPaint()
       return;
 
    ::SetDIBitsToDevice(dc.m_hDC,
-      0, 0, imageWidth, imageHeight,   // Destination
-      0, 0, 0, imageHeight,            // Source
+      0, 0, width, height,   // Destination
+      0, 0, 0, height,            // Source
       dstData, bitmapInfo, DIB_RGB_COLORS);	
 }
 
@@ -86,18 +90,18 @@ void CChildView::OnFileOpen()
    // Important Variables
    bitmapInfo     = (BITMAPINFO *) dibData;
    samplePerPixel = bitmapInfo->bmiHeader.biBitCount / 8;
-   imageWidth     = bitmapInfo->bmiHeader.biWidth;
-   imageHeight    = bitmapInfo->bmiHeader.biHeight;
-   imageStep      = GetRealWidth(imageWidth);
+   width          = bitmapInfo->bmiHeader.biWidth;
+   height         = bitmapInfo->bmiHeader.biHeight;
+   step           = GetRealWidth(width);
    srcData        = dibData + sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * bitmapInfo->bmiHeader.biClrUsed;
 
    // Allocate destination memory
    if(dstData)
       delete[] dstData;
-   dstData  = new unsigned char[imageStep * imageHeight];
+   dstData  = new unsigned char[step * height];
 
    // copy src to dst
-   memcpy(dstData, srcData, imageStep * imageHeight);
+   memcpy(dstData, srcData, step * height);
 
    // Close file
    fclose(file);
@@ -134,7 +138,7 @@ void CChildView::OnArithmeticAdd()
    if(dibData == NULL)
       return;
 
-   for(int i=0;i<imageWidth * imageHeight;i++){
+   for(int i=0;i<width * height;i++){
       dstData[i] = Clip(srcData[i] + 100, 0, 255);
    }
 
@@ -146,7 +150,7 @@ void CChildView::OnArithmeticSub()
    if(dibData == NULL)
       return;
 
-   for(int i=0;i<imageWidth * imageHeight;i++){
+   for(int i=0;i<width * height;i++){
       dstData[i] = Clip(srcData[i] - 100, 0, 255);
    }
 
@@ -158,7 +162,7 @@ void CChildView::OnArithmeticMultiply()
    if(dibData == NULL)
       return;
 
-   for(int i=0;i<imageWidth * imageHeight;i++){
+   for(int i=0;i<width * height;i++){
       dstData[i] = Clip(srcData[i] * 2, 0, 255);
    }
 
@@ -170,7 +174,7 @@ void CChildView::OnArithmeticDivide()
    if(dibData == NULL)
       return;
 
-   for(int i=0;i<imageWidth * imageHeight;i++){
+   for(int i=0;i<width * height;i++){
       dstData[i] = Clip(srcData[i] / 2, 0, 255);
    }
 
@@ -182,9 +186,47 @@ void CChildView::OnArithmeticNegative()
    if(dibData == NULL)
       return;
 
-   for(int i=0;i<imageWidth * imageHeight;i++){
+   for(int i=0;i<width * height;i++){
       dstData[i] = 255 - srcData[i];
    }
 
+   Invalidate(FALSE);
+}
+
+void CChildView::OnGeometricFlipV()
+{
+   for(int i=0;i<height;i++){
+      memcpy(dstData + i*step, srcData + (height-1-i)*step, step);
+   }
+   Invalidate(FALSE);
+}
+
+void CChildView::OnGeometricFlipH()
+{
+   for(int i=0;i<height;i++){
+      for(int j=0;j<width;j++){
+         dstData[i*step + j] = srcData[i*step + (width-j-1)];
+      }
+   }
+   Invalidate(FALSE);
+}
+
+void CChildView::OnGeometricRotateLeft()
+{
+   for(int i=0;i<height;i++){
+      for(int j=0;j<width;j++){
+         dstData[j*step + (height-i-1)] = srcData[i*step + j];
+      }
+   }
+   Invalidate(FALSE);
+}
+
+void CChildView::OnGeometricRotateRight()
+{
+   for(int i=0;i<height;i++){
+      for(int j=0;j<width;j++){
+         dstData[i*step + j] = srcData[j*step + (height-i-1)];
+      }
+   }
    Invalidate(FALSE);
 }

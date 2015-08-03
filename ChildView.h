@@ -14,9 +14,9 @@ public:
    unsigned char *   dstData;
 
    int               samplePerPixel;
-   int               imageWidth;
-   int               imageHeight;
-   int               imageStep;
+   int               width;
+   int               height;
+   int               step;
    
    int               GetRealWidth(int width);
    unsigned char     Clip(int value, int low, int high);
@@ -43,5 +43,10 @@ public:
    afx_msg void OnArithmeticMultiply();
    afx_msg void OnArithmeticDivide();
    afx_msg void OnArithmeticNegative();
+
+   afx_msg void OnGeometricFlipV();
+   afx_msg void OnGeometricFlipH();
+   afx_msg void OnGeometricRotateLeft();
+   afx_msg void OnGeometricRotateRight();
 };
 
