@@ -21,6 +21,10 @@ public:
    int               GetRealWidth(int width);
    unsigned char     Clip(int value, int low, int high);
 
+   CScrollBar        scrollBar;
+
+   void              GammaCorrection(double gamma);
+
 // Operations
 public:
 
@@ -35,9 +39,12 @@ public:
 	// Generated message map functions
 protected:
 	afx_msg void OnPaint();
+   afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+   afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	DECLARE_MESSAGE_MAP()
 public:
    afx_msg void OnFileOpen();
+
    afx_msg void OnArithmeticAdd();
    afx_msg void OnArithmeticSub();
    afx_msg void OnArithmeticMultiply();
@@ -48,5 +55,12 @@ public:
    afx_msg void OnGeometricFlipH();
    afx_msg void OnGeometricRotateLeft();
    afx_msg void OnGeometricRotateRight();
+
+   afx_msg void OnLUTAdd();
+   afx_msg void OnLUTNegative();
+   afx_msg void OnLUTGamma();
+   afx_msg void OnUpdateLutAdd(CCmdUI *pCmdUI);
+   afx_msg void OnUpdateLutNegative(CCmdUI *pCmdUI);
+   afx_msg void OnUpdateLutGamma(CCmdUI *pCmdUI);
 };
 

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "MIPL.h"
 #include "ChildView.h"
+#include "Math.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -8,8 +9,8 @@
 
 CChildView::CChildView()
 {
-   dibData      = NULL;
-   dstData      = NULL;
+   dibData     = NULL;
+   dstData     = NULL;
 }
 
 CChildView::~CChildView()
@@ -22,6 +23,8 @@ CChildView::~CChildView()
 
 BEGIN_MESSAGE_MAP(CChildView, CWnd)
 	ON_WM_PAINT()
+   ON_WM_CREATE()
+   ON_WM_HSCROLL()
    ON_COMMAND(ID_FILE_OPEN,               OnFileOpen)
    ON_COMMAND(ID_ARITHMETIC_ADD,          OnArithmeticAdd)
    ON_COMMAND(ID_ARITHMETIC_SUB,          OnArithmeticSub)
@@ -32,6 +35,12 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
    ON_COMMAND(ID_GEOMETRIC_FLIPH,         OnGeometricFlipH)
    ON_COMMAND(ID_GEOMETRIC_ROTATELEFT,    OnGeometricRotateLeft)
    ON_COMMAND(ID_GEOMETRIC_ROTATERIGHT,   OnGeometricRotateRight)
+   ON_COMMAND(ID_LUT_ADD,                 OnLUTAdd)
+   ON_COMMAND(ID_LUT_NEGATIVE,            OnLUTNegative)
+   ON_COMMAND(ID_LUT_GAMMA,               OnLUTGamma)
+   ON_UPDATE_COMMAND_UI(ID_LUT_ADD,       OnUpdateLutAdd)
+   ON_UPDATE_COMMAND_UI(ID_LUT_NEGATIVE,  OnUpdateLutNegative)
+   ON_UPDATE_COMMAND_UI(ID_LUT_GAMMA,     OnUpdateLutGamma)
 END_MESSAGE_MAP()
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs) 
@@ -47,6 +56,18 @@ BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs)
 	return TRUE;
 }
 
+int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+   if (CWnd::OnCreate(lpCreateStruct) == -1)
+      return -1;
+
+   scrollBar.Create(SBS_HORZ | WS_VISIBLE | WS_CHILD, CRect(0, 600, 600, 600+20), this, 9999);
+   scrollBar.SetScrollRange(0, 100);
+   scrollBar.SetScrollPos(0);
+
+   return 0;
+}
+
 void CChildView::OnPaint() 
 {
 	CPaintDC dc(this);
@@ -54,10 +75,33 @@ void CChildView::OnPaint()
    if(dibData == NULL)
       return;
 
+   // Draw Image
    ::SetDIBitsToDevice(dc.m_hDC,
-      0, 0, width, height,   // Destination
-      0, 0, 0, height,            // Source
+      0, 0, width, height,    // Destination
+      0, 0, 0, height,        // Source
       dstData, bitmapInfo, DIB_RGB_COLORS);	
+
+   // Draw GDI Object
+   CPen Pen;
+   CPen * pOldPen;
+   Pen.CreatePen(PS_SOLID, 1, RGB(255,0,0));
+   pOldPen = dc.SelectObject(&Pen);
+
+   CBrush Brush;
+   CBrush * pOldBrush;
+   Brush.CreateSolidBrush(RGB(0,255,0));
+   pOldBrush = dc.SelectObject(&Brush);
+   {
+      dc.MoveTo(100, 100);
+      dc.LineTo(200, 200);
+
+      dc.Rectangle(10, 10, 50, 50);
+   }
+   dc.SelectObject(pOldBrush);
+   Brush.DeleteObject();
+
+   dc.SelectObject(pOldPen);
+   Pen.DeleteObject();
 }
 
 void CChildView::OnFileOpen()
@@ -229,4 +273,83 @@ void CChildView::OnGeometricRotateRight()
       }
    }
    Invalidate(FALSE);
+}
+
+void CChildView::OnLUTAdd()
+{
+   unsigned char lut[256];
+
+   for(int i=0;i<255;i++){
+      lut[i] = Clip(i+50, 0, 255);
+   }
+
+   for(int i=0;i<width * height;i++){
+      dstData[i] = lut[srcData[i]];
+   }
+
+   Invalidate(FALSE);
+}
+
+void CChildView::OnLUTNegative()
+{
+   unsigned char lut[256];
+
+   for(int i=0;i<255;i++){
+      lut[i] = 255 - i;
+   }
+
+   for(int i=0;i<width * height;i++){
+      dstData[i] = lut[srcData[i]];
+   }
+
+   Invalidate(FALSE);
+}
+
+void CChildView::OnLUTGamma()
+{
+   GammaCorrection(0.8);
+}
+
+void CChildView::GammaCorrection(double gamma)
+{
+   double exp = 1. / gamma;
+
+   unsigned char lut[256];
+
+   for(int i=0;i<255;i++){
+      lut[i] = unsigned char( pow(i / 255., exp) * 255 );
+   }
+
+   for(int i=0;i<width * height;i++){
+      dstData[i] = lut[srcData[i]];
+//    dstData[i] = unsigned char( pow(srcData[i]/ 255., exp) * 255 );
+   }
+
+   Invalidate(FALSE);
+}
+
+void CChildView::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
+{
+   double gamma = 1. - nPos / 200.;
+   GammaCorrection(gamma);
+
+   CWnd::OnHScroll(nSBCode, nPos, pScrollBar);
+}
+
+void CChildView::OnUpdateLutAdd(CCmdUI *pCmdUI)
+{
+   if(dibData == NULL)
+      pCmdUI->Enable(FALSE);
+}
+
+void CChildView::OnUpdateLutNegative(CCmdUI *pCmdUI)
+{
+   if(dibData == NULL)
+      pCmdUI->Enable(FALSE);
+}
+
+void CChildView::OnUpdateLutGamma(CCmdUI *pCmdUI)
+{
+   if(dibData == NULL)
+      pCmdUI->Enable(FALSE);
 }
