@@ -25,6 +25,11 @@ public:
 
    void              GammaCorrection(double gamma);
 
+   void              SpatialFilter3x3(double * mask);
+
+   BOOL              m_bDown;
+   CPoint            m_ptDown;
+
 // Operations
 public:
 
@@ -62,5 +67,11 @@ public:
    afx_msg void OnUpdateLutAdd(CCmdUI *pCmdUI);
    afx_msg void OnUpdateLutNegative(CCmdUI *pCmdUI);
    afx_msg void OnUpdateLutGamma(CCmdUI *pCmdUI);
+   
+   afx_msg void OnFilterBlur();
+   afx_msg void OnFilterSharpen();
+   afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+   afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+   afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 };
 

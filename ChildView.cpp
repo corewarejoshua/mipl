@@ -11,6 +11,7 @@ CChildView::CChildView()
 {
    dibData     = NULL;
    dstData     = NULL;
+   m_bDown     = FALSE;
 }
 
 CChildView::~CChildView()
@@ -41,6 +42,11 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
    ON_UPDATE_COMMAND_UI(ID_LUT_ADD,       OnUpdateLutAdd)
    ON_UPDATE_COMMAND_UI(ID_LUT_NEGATIVE,  OnUpdateLutNegative)
    ON_UPDATE_COMMAND_UI(ID_LUT_GAMMA,     OnUpdateLutGamma)
+   ON_COMMAND(ID_FILTER_BLUR,             OnFilterBlur)
+   ON_COMMAND(ID_FILTER_SHARPEN,          OnFilterSharpen)
+   ON_WM_LBUTTONDOWN()
+   ON_WM_LBUTTONUP()
+   ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs) 
@@ -352,4 +358,77 @@ void CChildView::OnUpdateLutGamma(CCmdUI *pCmdUI)
 {
    if(dibData == NULL)
       pCmdUI->Enable(FALSE);
+}
+
+void CChildView::OnFilterBlur()
+{
+   double mask[9] = {1/9., 1/9., 1/9.,
+                     1/9., 1/9., 1/9.,
+                     1/9., 1/9., 1/9.};
+   SpatialFilter3x3(mask);
+}
+
+void CChildView::OnFilterSharpen()
+{
+   double mask[9] = {0, -1, 0,
+                     -1, 5, -1,
+                     0, -1, 0};
+   SpatialFilter3x3(mask);
+}
+
+void CChildView::SpatialFilter3x3(double * mask)
+{
+   double sum;
+   for(int i=1;i<height-1;i++){
+      for(int j=1;j<width-1;j++){
+         sum = 0;
+         for(int k=0;k<3;k++){
+            for(int l=0;l<3;l++){
+               sum += srcData[(i+k-1)*step+ (j+l-1)] * mask[k*3+l];
+            }
+         }
+         dstData[i*step+j] = Clip(int(sum), 0, 255);
+      }
+   }
+
+   Invalidate(FALSE);
+}
+
+void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
+{
+   m_bDown = TRUE;
+   m_ptDown = point;
+
+   CWnd::OnLButtonDown(nFlags, point);
+}
+
+
+void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
+{
+   m_bDown = FALSE;
+
+   CWnd::OnLButtonUp(nFlags, point);
+}
+
+
+void CChildView::OnMouseMove(UINT nFlags, CPoint point)
+{
+   if(m_bDown){
+
+      int diff = m_ptDown.y - point.y;
+
+      unsigned char lut[256];
+
+      for(int i=0;i<255;i++){
+         lut[i] = Clip(i+diff, 0, 255);
+      }
+
+      for(int i=0;i<width * height;i++){
+         dstData[i] = lut[srcData[i]];
+      }
+
+      Invalidate(FALSE);
+   }  
+
+   CWnd::OnMouseMove(nFlags, point);
 }
