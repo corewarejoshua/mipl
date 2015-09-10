@@ -10,7 +10,11 @@
 CChildView::CChildView()
 {
    dibData     = NULL;
+   dibImage    = NULL;
+
    dstData     = NULL;
+   srcData     = NULL;
+
    m_bDown     = FALSE;
 }
 
@@ -18,14 +22,19 @@ CChildView::~CChildView()
 {
    if(dibData)
       delete[] dibData;
+   
    if(dstData)
       delete[] dstData;
+   if(srcData)
+      delete[] srcData;
 }
 
 BEGIN_MESSAGE_MAP(CChildView, CWnd)
-	ON_WM_PAINT()
    ON_WM_CREATE()
-   ON_WM_HSCROLL()
+	ON_WM_PAINT()
+   ON_WM_RBUTTONDOWN()
+   ON_WM_RBUTTONUP()
+   ON_WM_MOUSEMOVE()
    ON_COMMAND(ID_FILE_OPEN,               OnFileOpen)
    ON_COMMAND(ID_ARITHMETIC_ADD,          OnArithmeticAdd)
    ON_COMMAND(ID_ARITHMETIC_SUB,          OnArithmeticSub)
@@ -36,17 +45,6 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
    ON_COMMAND(ID_GEOMETRIC_FLIPH,         OnGeometricFlipH)
    ON_COMMAND(ID_GEOMETRIC_ROTATELEFT,    OnGeometricRotateLeft)
    ON_COMMAND(ID_GEOMETRIC_ROTATERIGHT,   OnGeometricRotateRight)
-   ON_COMMAND(ID_LUT_ADD,                 OnLUTAdd)
-   ON_COMMAND(ID_LUT_NEGATIVE,            OnLUTNegative)
-   ON_COMMAND(ID_LUT_GAMMA,               OnLUTGamma)
-   ON_UPDATE_COMMAND_UI(ID_LUT_ADD,       OnUpdateLutAdd)
-   ON_UPDATE_COMMAND_UI(ID_LUT_NEGATIVE,  OnUpdateLutNegative)
-   ON_UPDATE_COMMAND_UI(ID_LUT_GAMMA,     OnUpdateLutGamma)
-   ON_COMMAND(ID_FILTER_BLUR,             OnFilterBlur)
-   ON_COMMAND(ID_FILTER_SHARPEN,          OnFilterSharpen)
-   ON_WM_LBUTTONDOWN()
-   ON_WM_LBUTTONUP()
-   ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs) 
@@ -67,9 +65,6 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
    if (CWnd::OnCreate(lpCreateStruct) == -1)
       return -1;
 
-   scrollBar.Create(SBS_HORZ | WS_VISIBLE | WS_CHILD, CRect(0, 600, 600, 600+20), this, 9999);
-   scrollBar.SetScrollRange(0, 100);
-   scrollBar.SetScrollPos(0);
 
    return 0;
 }
@@ -85,79 +80,138 @@ void CChildView::OnPaint()
    ::SetDIBitsToDevice(dc.m_hDC,
       0, 0, width, height,    // Destination
       0, 0, 0, height,        // Source
-      dstData, bitmapInfo, DIB_RGB_COLORS);	
-
-   // Draw GDI Object
-   CPen Pen;
-   CPen * pOldPen;
-   Pen.CreatePen(PS_SOLID, 1, RGB(255,0,0));
-   pOldPen = dc.SelectObject(&Pen);
-
-   CBrush Brush;
-   CBrush * pOldBrush;
-   Brush.CreateSolidBrush(RGB(0,255,0));
-   pOldBrush = dc.SelectObject(&Brush);
-   {
-      dc.MoveTo(100, 100);
-      dc.LineTo(200, 200);
-
-      dc.Rectangle(10, 10, 50, 50);
-   }
-   dc.SelectObject(pOldBrush);
-   Brush.DeleteObject();
-
-   dc.SelectObject(pOldPen);
-   Pen.DeleteObject();
+      dibImage, bitmapInfo, DIB_RGB_COLORS);	
 }
 
 void CChildView::OnFileOpen()
 {
    // Show File Dialog Box
-   CString szFilter = _T("bitmap Files (*.bmp)|*.bmp|All Files (*.*)|*.*|");
+   CString szFilter = _T("DICOM Files (*.dcm)|*.dcm|bitmap Files (*.bmp)|*.bmp|All Files (*.*)|*.*|");
    CFileDialog dlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ALLOWMULTISELECT, szFilter,this);
    if(dlg.DoModal() == IDCANCEL)
       return;
 
-   // Open File
-   FILE * file;
-   _wfopen_s(&file, dlg.GetPathName(), L"rb");
+   CString ext = dlg.GetFileExt();
+   ext.MakeUpper();
+   if(ext == L"DCM")
+      OpenDICOMFile(dlg.GetPathName());
+}
 
-   // Read File Header
-   BITMAPFILEHEADER bitmapFileHeader;
-   fread(&bitmapFileHeader, sizeof(BITMAPFILEHEADER), 1, file);
+void CChildView::OpenDICOMFile(CString path)
+{
+   // Allocate KDicomDS object
+   KDicomDS * dicomDS = new KDicomDS;
+
+   // Load File
+   dicomDS->LoadDS(path);
+
+   // Get Parameters
+   samplePerPixel       = dicomDS->m_nSamplePerPixel;
+   photometric          = dicomDS->m_nPhotometric;
+   width                = dicomDS->m_nWidth;
+   height               = dicomDS->m_nHeight;
+   bitsAllocated        = dicomDS->m_nBitsAllocated;
+   bitsStored           = dicomDS->m_nBitsStored;
+   pixelRepresentation  = dicomDS->m_nRepresentation;
+   windowCenter         = dicomDS->m_dWindowCenter;
+   windowWidth          = dicomDS->m_dWindowWidth;
+   if(bitsAllocated == 8)
+      srcStep = width * samplePerPixel;
+   else
+      srcStep = width * 2;
+
+   // Allocate image processing source memory
+   if(srcData)
+      delete[] srcData;
+   srcData  = new unsigned char[srcStep * height];
+   dicomDS->GetImageData(srcData);
+
+   // Allocate image processing dest memory
+   if(dstData)
+      delete[] dstData;
+   dstData  = new unsigned char[srcStep * height];
+   memcpy(dstData, srcData, srcStep * height);
+   
+   // Delete DicomDS
+   delete dicomDS;
+
+   CreateDIB();
+   Trans16to8();
+   Invalidate(FALSE);
+}
+
+BOOL CChildView::CreateDIB()
+{
+   int colorNum = 256;
+   dibStep = GetRealWidth(width);
 
    // Calculate DIB size
-   int dibSize = bitmapFileHeader.bfSize - sizeof(BITMAPFILEHEADER);
+   int dibSize = sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * colorNum + dibStep * height;
 
    // Allocate DIB memory
    if(dibData)
       delete[] dibData;
    dibData = new unsigned char[dibSize];
 
-   // Read DIB
-   fread(dibData, dibSize, 1, file);
+   bitmapInfo = (BITMAPINFO *) dibData;
 
-   // Important Variables
-   bitmapInfo     = (BITMAPINFO *) dibData;
-   samplePerPixel = bitmapInfo->bmiHeader.biBitCount / 8;
-   width          = bitmapInfo->bmiHeader.biWidth;
-   height         = bitmapInfo->bmiHeader.biHeight;
-   step           = GetRealWidth(width);
-   srcData        = dibData + sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * bitmapInfo->bmiHeader.biClrUsed;
+   // Make BITMAPINFOHEADER
+   bitmapInfo->bmiHeader.biSize           = sizeof(BITMAPINFOHEADER);
+   bitmapInfo->bmiHeader.biWidth			   = width;
+   bitmapInfo->bmiHeader.biHeight			= height;
+   bitmapInfo->bmiHeader.biPlanes			= 1;
+   bitmapInfo->bmiHeader.biBitCount		   = WORD(samplePerPixel * 8);
+   bitmapInfo->bmiHeader.biCompression	   = 0;
+   bitmapInfo->bmiHeader.biSizeImage		= dibStep * height;
+   bitmapInfo->bmiHeader.biXPelsPerMeter	= 0;
+   bitmapInfo->bmiHeader.biYPelsPerMeter	= 0;
+   bitmapInfo->bmiHeader.biClrUsed		   = colorNum;
+   bitmapInfo->bmiHeader.biClrImportant	= 0;
 
-   // Allocate destination memory
-   if(dstData)
-      delete[] dstData;
-   dstData  = new unsigned char[step * height];
+   dibImage = dibData + sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * colorNum;
 
-   // copy src to dst
-   memcpy(dstData, srcData, step * height);
+   if(photometric == MONOCHROME1){
+      for(int i=0;i<colorNum;i++){
+         bitmapInfo->bmiColors[i].rgbRed     = 255-i;
+         bitmapInfo->bmiColors[i].rgbGreen   = 255-i;
+         bitmapInfo->bmiColors[i].rgbBlue    = 255-i;
+         bitmapInfo->bmiColors[i].rgbReserved = 0;
+      }
+   }
+   else if(photometric == MONOCHROME2){
+      for(int i=0;i<colorNum;i++){
+         bitmapInfo->bmiColors[i].rgbRed     = i;
+         bitmapInfo->bmiColors[i].rgbGreen   = i;
+         bitmapInfo->bmiColors[i].rgbBlue    = i;
+         bitmapInfo->bmiColors[i].rgbReserved = 0;
+      }
+   }
 
-   // Close file
-   fclose(file);
+   return TRUE;
+}
 
-   // Repaint client area
-   Invalidate(FALSE);
+void CChildView::Trans16to8()
+{
+   if(bitsAllocated == 8)
+      return;
+
+   short * src = (short *) dstData;
+   int low  = windowCenter - windowWidth / 2;
+   int high = windowCenter + windowWidth / 2;
+   double ratio = 255 / windowWidth;
+   short value;
+   for(int i=0;i<height;i++){
+      for(int j=0;j<width;j++){
+         value = src[i*width + j];
+         if(value < low)
+            dibImage[(height - 1 - i)*dibStep + j] = 0;
+         else if(value > high)
+            dibImage[(height - 1 - i)*dibStep + j] = 255;
+         else{
+            dibImage[(height - 1 - i)*width + j] = (value - low) * ratio;
+         }
+      }
+   }
 }
 
 int CChildView::GetRealWidth(int width)
@@ -173,240 +227,32 @@ int CChildView::GetRealWidth(int width)
       return width;
 }
 
-unsigned char CChildView::Clip(int value, int low, int high)
+int CChildView::Clip(int value, int low, int high)
 {
    if(value < low)
-      return (unsigned char) low;
+      return low;
    else if(value > high)
-      return (unsigned char) high;
+      return high;
    else 
-      return (unsigned char) value;
+      return value;
 }
 
-void CChildView::OnArithmeticAdd()
-{
-   if(dibData == NULL)
-      return;
-
-   for(int i=0;i<width * height;i++){
-      dstData[i] = Clip(srcData[i] + 100, 0, 255);
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnArithmeticSub()
-{
-   if(dibData == NULL)
-      return;
-
-   for(int i=0;i<width * height;i++){
-      dstData[i] = Clip(srcData[i] - 100, 0, 255);
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnArithmeticMultiply()
-{
-   if(dibData == NULL)
-      return;
-
-   for(int i=0;i<width * height;i++){
-      dstData[i] = Clip(srcData[i] * 2, 0, 255);
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnArithmeticDivide()
-{
-   if(dibData == NULL)
-      return;
-
-   for(int i=0;i<width * height;i++){
-      dstData[i] = Clip(srcData[i] / 2, 0, 255);
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnArithmeticNegative()
-{
-   if(dibData == NULL)
-      return;
-
-   for(int i=0;i<width * height;i++){
-      dstData[i] = 255 - srcData[i];
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnGeometricFlipV()
-{
-   for(int i=0;i<height;i++){
-      memcpy(dstData + i*step, srcData + (height-1-i)*step, step);
-   }
-   Invalidate(FALSE);
-}
-
-void CChildView::OnGeometricFlipH()
-{
-   for(int i=0;i<height;i++){
-      for(int j=0;j<width;j++){
-         dstData[i*step + j] = srcData[i*step + (width-j-1)];
-      }
-   }
-   Invalidate(FALSE);
-}
-
-void CChildView::OnGeometricRotateLeft()
-{
-   for(int i=0;i<height;i++){
-      for(int j=0;j<width;j++){
-         dstData[j*step + (height-i-1)] = srcData[i*step + j];
-      }
-   }
-   Invalidate(FALSE);
-}
-
-void CChildView::OnGeometricRotateRight()
-{
-   for(int i=0;i<height;i++){
-      for(int j=0;j<width;j++){
-         dstData[i*step + j] = srcData[j*step + (height-i-1)];
-      }
-   }
-   Invalidate(FALSE);
-}
-
-void CChildView::OnLUTAdd()
-{
-   unsigned char lut[256];
-
-   for(int i=0;i<255;i++){
-      lut[i] = Clip(i+50, 0, 255);
-   }
-
-   for(int i=0;i<width * height;i++){
-      dstData[i] = lut[srcData[i]];
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnLUTNegative()
-{
-   unsigned char lut[256];
-
-   for(int i=0;i<255;i++){
-      lut[i] = 255 - i;
-   }
-
-   for(int i=0;i<width * height;i++){
-      dstData[i] = lut[srcData[i]];
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnLUTGamma()
-{
-   GammaCorrection(0.8);
-}
-
-void CChildView::GammaCorrection(double gamma)
-{
-   double exp = 1. / gamma;
-
-   unsigned char lut[256];
-
-   for(int i=0;i<255;i++){
-      lut[i] = unsigned char( pow(i / 255., exp) * 255 );
-   }
-
-   for(int i=0;i<width * height;i++){
-      dstData[i] = lut[srcData[i]];
-//    dstData[i] = unsigned char( pow(srcData[i]/ 255., exp) * 255 );
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
-{
-   double gamma = 1. - nPos / 200.;
-   GammaCorrection(gamma);
-
-   CWnd::OnHScroll(nSBCode, nPos, pScrollBar);
-}
-
-void CChildView::OnUpdateLutAdd(CCmdUI *pCmdUI)
-{
-   if(dibData == NULL)
-      pCmdUI->Enable(FALSE);
-}
-
-void CChildView::OnUpdateLutNegative(CCmdUI *pCmdUI)
-{
-   if(dibData == NULL)
-      pCmdUI->Enable(FALSE);
-}
-
-void CChildView::OnUpdateLutGamma(CCmdUI *pCmdUI)
-{
-   if(dibData == NULL)
-      pCmdUI->Enable(FALSE);
-}
-
-void CChildView::OnFilterBlur()
-{
-   double mask[9] = {1/9., 1/9., 1/9.,
-                     1/9., 1/9., 1/9.,
-                     1/9., 1/9., 1/9.};
-   SpatialFilter3x3(mask);
-}
-
-void CChildView::OnFilterSharpen()
-{
-   double mask[9] = {0, -1, 0,
-                     -1, 5, -1,
-                     0, -1, 0};
-   SpatialFilter3x3(mask);
-}
-
-void CChildView::SpatialFilter3x3(double * mask)
-{
-   double sum;
-   for(int i=1;i<height-1;i++){
-      for(int j=1;j<width-1;j++){
-         sum = 0;
-         for(int k=0;k<3;k++){
-            for(int l=0;l<3;l++){
-               sum += srcData[(i+k-1)*step+ (j+l-1)] * mask[k*3+l];
-            }
-         }
-         dstData[i*step+j] = Clip(int(sum), 0, 255);
-      }
-   }
-
-   Invalidate(FALSE);
-}
-
-void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
+void CChildView::OnRButtonDown(UINT nFlags, CPoint point)
 {
    m_bDown = TRUE;
    m_ptDown = point;
+
+   windowCenterTemp  = windowCenter;
+   windowWidthTemp   = windowWidth;
 
    CWnd::OnLButtonDown(nFlags, point);
 }
 
 
-void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
+void CChildView::OnRButtonUp(UINT nFlags, CPoint point)
 {
    m_bDown = FALSE;
-
+   
    CWnd::OnLButtonUp(nFlags, point);
 }
 
@@ -414,21 +260,18 @@ void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 {
    if(m_bDown){
+      if(bitsAllocated == 16){
+         int dx = (point.x - m_ptDown.x) * 100;
+         int dy = (point.y - m_ptDown.y) * 100;
 
-      int diff = m_ptDown.y - point.y;
+         windowWidth    = windowWidthTemp + dx;
+         windowCenter   = windowCenterTemp + dy;
 
-      unsigned char lut[256];
-
-      for(int i=0;i<255;i++){
-         lut[i] = Clip(i+diff, 0, 255);
+         Trans16to8();
+         Invalidate(FALSE);
       }
-
-      for(int i=0;i<width * height;i++){
-         dstData[i] = lut[srcData[i]];
-      }
-
-      Invalidate(FALSE);
    }  
 
    CWnd::OnMouseMove(nFlags, point);
 }
+

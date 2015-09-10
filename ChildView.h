@@ -9,19 +9,20 @@ public:
 // Attributes
 public:
    BITMAPINFO *      bitmapInfo;
+   
    unsigned char *   dibData;
+   unsigned char *   dibImage;
+
    unsigned char *   srcData;
    unsigned char *   dstData;
 
-   int               samplePerPixel;
-   int               width;
-   int               height;
-   int               step;
+   int               samplePerPixel, width, height, srcStep, dibStep, bitsAllocated, bitsStored;
+   int               pixelRepresentation;
+   double            windowWidth, windowCenter, windowWidthTemp, windowCenterTemp;
+   KD_PHOTOMETRIC    photometric;
    
    int               GetRealWidth(int width);
-   unsigned char     Clip(int value, int low, int high);
-
-   CScrollBar        scrollBar;
+   int               Clip(int value, int low, int high);
 
    void              GammaCorrection(double gamma);
 
@@ -29,6 +30,11 @@ public:
 
    BOOL              m_bDown;
    CPoint            m_ptDown;
+
+   void              OpenDICOMFile(CString path);
+
+   BOOL              CreateDIB();
+   void              Trans16to8();
 
 // Operations
 public:
@@ -45,7 +51,6 @@ public:
 protected:
 	afx_msg void OnPaint();
    afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
-   afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	DECLARE_MESSAGE_MAP()
 public:
    afx_msg void OnFileOpen();
@@ -60,18 +65,9 @@ public:
    afx_msg void OnGeometricFlipH();
    afx_msg void OnGeometricRotateLeft();
    afx_msg void OnGeometricRotateRight();
-
-   afx_msg void OnLUTAdd();
-   afx_msg void OnLUTNegative();
-   afx_msg void OnLUTGamma();
-   afx_msg void OnUpdateLutAdd(CCmdUI *pCmdUI);
-   afx_msg void OnUpdateLutNegative(CCmdUI *pCmdUI);
-   afx_msg void OnUpdateLutGamma(CCmdUI *pCmdUI);
-   
-   afx_msg void OnFilterBlur();
-   afx_msg void OnFilterSharpen();
-   afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
-   afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+  
+   afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
+   afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
    afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 };
 
