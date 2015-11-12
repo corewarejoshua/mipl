@@ -15,17 +15,9 @@ void CChildView::OnArithmeticAdd()
 
    short * src = (short *) srcData;
    short * dst = (short *) dstData;
-   /*
-
-   for(int i=0;i<step * height;i++){
+   for(int i=0;i<srcStep * height;i++){
       dst[i] = Clip(src[i] + 200, -32768, 32768);
    }
-   */
-
-   IppiSize  roiSize;
-   roiSize.width  = width;
-   roiSize.height = height;
-   ippiAddC_16s_C1RSfs(src, srcStep, 100, dst, srcStep, roiSize, 0);
 
    Trans16to8();
    Invalidate(FALSE);

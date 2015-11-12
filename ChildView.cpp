@@ -45,6 +45,7 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
    ON_COMMAND(ID_GEOMETRIC_FLIPH,         OnGeometricFlipH)
    ON_COMMAND(ID_GEOMETRIC_ROTATELEFT,    OnGeometricRotateLeft)
    ON_COMMAND(ID_GEOMETRIC_ROTATERIGHT,   OnGeometricRotateRight)
+   ON_COMMAND(ID_LUT_OPEN, &CChildView::OnLutOpen)
 END_MESSAGE_MAP()
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs) 
@@ -136,14 +137,35 @@ void CChildView::OpenDICOMFile(CString path)
    delete dicomDS;
 
    CreateDIB();
-   Trans16to8();
+
+   if(samplePerPixel == 1)
+      Trans16to8();
+   else{
+      int srcOffset;
+      int dstOffset;
+      for(int i=0;i<height;i++){
+         dstOffset = (height - i - 1) * dibStep;
+         srcOffset = i * srcStep;
+         for(int j=0;j<width;j++){
+            dibImage[dstOffset + j*3+2] = dstData[srcOffset + j*3];
+            dibImage[dstOffset + j*3+1] = dstData[srcOffset + j*3+1];
+            dibImage[dstOffset + j*3] = dstData[srcOffset + j*3+2];
+         }
+      }
+   }
+
    Invalidate(FALSE);
 }
 
 BOOL CChildView::CreateDIB()
 {
-   int colorNum = 256;
-   dibStep = GetRealWidth(width);
+   int colorNum;
+   if(samplePerPixel == 1)
+      colorNum = 256;
+   else
+      colorNum = 0;
+
+   dibStep = GetRealWidth(width * samplePerPixel);
 
    // Calculate DIB size
    int dibSize = sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * colorNum + dibStep * height;
@@ -189,6 +211,7 @@ BOOL CChildView::CreateDIB()
 
    return TRUE;
 }
+
 
 void CChildView::Trans16to8()
 {
@@ -275,3 +298,65 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
    CWnd::OnMouseMove(nFlags, point);
 }
 
+void CChildView::OnLutOpen()
+{
+   CString szFilter = _T("LUT Files (*.lut)|*.lut|All Files (*.*)|*.*|");
+   CFileDialog dlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ALLOWMULTISELECT, szFilter,this);
+   if(dlg.DoModal() == IDCANCEL)
+      return;
+
+   FILE * file;
+   if((file = _tfopen(dlg.GetPathName(), _T("r"))) == NULL){
+      AfxMessageBox(_T("Cannot Open LUT file"));
+      return;
+   }
+
+   char szLine[1024];
+   char seps[] = "\n\\\r\\\t\\ ";
+   char * token;
+   CString str, type;
+   unsigned short r,g,b, index;
+
+   while(fgets(szLine, 1024, file) != NULL){
+      token = strtok(szLine, seps);
+      str = token;         
+
+      // Comment
+      if(str == "*")
+         continue;
+
+      // Type
+      type = token;
+      type.MakeUpper();
+
+      // Value
+      if(type == "S"){
+         token = strtok(NULL, seps);
+         if(token == NULL)
+            continue;
+         index = atoi(token);
+
+         token = strtok(NULL, seps);
+         if(token == NULL)
+            continue;
+         r = atoi(token);
+
+         token = strtok(NULL, seps);
+         if(token == NULL)
+            continue;
+         g = atoi(token);
+
+         token = strtok(NULL, seps);
+         if(token == NULL)
+            continue;
+         b = atoi(token);
+
+         bitmapInfo->bmiColors[index].rgbRed 	= Clip(r, 0, 255);
+         bitmapInfo->bmiColors[index].rgbGreen  = Clip(g, 0, 255);
+         bitmapInfo->bmiColors[index].rgbBlue   = Clip(b, 0, 255);
+      }
+   }
+   fclose(file);
+   
+   Invalidate(FALSE);
+}

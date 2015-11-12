@@ -692,6 +692,6 @@ BOOL KDicomDS::GetImageData(unsigned char * pBuff, int frame)
    else{
       frameLength	= pDE->GetLength() / m_nFrameCount;
       pRaw = pDE->GetValueOB() + frameLength * frame;
-      memcpy(pBuff, pRaw, m_nWidth * m_nHeight * 2);
+      memcpy(pBuff, pRaw, frameLength);
    }
 }
